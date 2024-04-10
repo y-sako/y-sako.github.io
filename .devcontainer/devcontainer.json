@@ -1,0 +1,20 @@
+{
+  "name": "my-site",
+  "dockerComposeFile": "./docker-compose.yml",
+  "service": "quarto",
+  "remoteUser": "rstudio",
+  "customizations": {
+    "vscode": {  
+      "extensions": [
+        "REditorSupport.r",
+        "quarto.quarto",
+        "znck.grammarly",
+        "janisdd.vscode-edit-csv",
+        "GitHub.copilot"
+      ]
+    }
+  },
+  "forwardPorts": [8787],
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose"
+}

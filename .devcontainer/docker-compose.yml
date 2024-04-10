@@ -1,0 +1,28 @@
+# version: '3'
+
+services:
+  quarto:
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: "${COMPOSE_PROJECT_NAME}" # 任意のコンテナ名を.envで指定
+    ports:
+      - "${PORTS_NUM_RSTUDIO}:8787" # 任意のポート番号を.envで指定
+    environment:
+      - ROOT=TRUE
+      - PASSWORD=password
+      - DISABLE_AUTH=true
+    volumes:
+      - ./.rstudio/rstudio-prefs.json:/home/rstudio/.config/rstudio/rstudio-prefs.json
+      - "${PATH_MNT}:/workspace"
+      - renv:/workspace/.cache/R/renv
+      - pip:/workspace/.pip
+    tty: true
+    stdin_open: true
+
+volumes:
+  renv:
+    external: true
+  pip:
+    external: true

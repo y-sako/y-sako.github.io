@@ -18,11 +18,3 @@ Since this post doesn't specify an explicit `image`, the first image in the post
 ## test2
 
 nyaa
-
-## 日本語
-
-テストだよ
-
-## ちょっとビミョい？
-
-嗚呼aaaaaaaaaaaaaa
