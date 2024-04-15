@@ -10,14 +10,17 @@ services:
     ports:
       - "${PORTS_NUM_RSTUDIO}:8787" # 任意のポート番号を.envで指定
     environment:
+      - TZ=Asia/Tokyo
       - ROOT=TRUE
       - PASSWORD=password
       - DISABLE_AUTH=true
+      - PYTHONUSERBASE=/home/rstudio/.pip
     volumes:
       - ./.rstudio/rstudio-prefs.json:/home/rstudio/.config/rstudio/rstudio-prefs.json
       - "${PATH_MNT}:/workspace"
-      - renv:/workspace/.cache/R/renv
-      - pip:/workspace/.pip
+      - renv:/home/rstudio/.cache/R/renv
+      - pip:/home/rstudio/.pip
+      # - TinyTeX:/home/rstudio/.TinyTeX
     tty: true
     stdin_open: true
 

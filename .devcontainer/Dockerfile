@@ -19,10 +19,6 @@ RUN apt-get update && apt-get install -y \
 
 # R
 ## ライブラリ
-# RUN install2.r --error --deps TRUE --ncpus -1 \
-#       # languageserver \
-#       renv
-
 RUN R -e "install.packages(c('renv'))"
       
 # Quarto
@@ -38,19 +34,9 @@ RUN quarto install extension quarto-ext/fontawesome  --no-prompt
 RUN apt-get update && apt-get install -y python3 python3-pip
 
 ## ライブラリ
-# RUN pip install -U pip \
-#       && pip install --no-cache-dir jupyter \
-#       && pip install --no-cache-dir jupyterlab \
-#       && pip install --no-cache-dir pandas \
-#       && pip install --no-cache-dir numpy \
-#       && pip install --no-cache-dir streamlit \
-#       && pip install --no-cache-dir shiny \
-#       && pip install --no-cache-dir lightweight_mmm \
-#       && pip install --no-cache-dir nevergrad
 
 # Reticulate
 RUN R -e "Sys.setenv(RETICULATE_PYTHON = '/usr/bin/python3.10')"
 
-# Package Cahce & Permission
-RUN cd / && mkdir .pip .cache .cache/R .cache/R/renv && \
-      chown rstudio:rstudio .pip .cache .cache/R .cache/R/renv
+RUN cd /home/rstudio && mkdir .pip .cache .cache/R .cache/R/renv .TinyTeX && \
+      chown rstudio:rstudio .pip .cache .cache/R .cache/R/renv .TinyTeX
