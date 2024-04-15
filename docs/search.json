@@ -4,7 +4,7 @@
     "href": "index.html",
     "title": "Posts",
     "section": "",
-    "text": "VSCode&Rでlanguageserverをインストール\n\n\n\n\n\n\nvscode\n\n\nr\n\n\n\n\n\n\n\n\n\nApr 15, 2024\n\n\ny-sako\n\n\n\n\n\n\n\n\n\n\n\n\nPost With Code\n\n\n\n\n\n\nnews\n\n\ncode\n\n\nanalysis\n\n\n\n\n\n\n\n\n\nApr 10, 2024\n\n\ny-sako\n\n\n\n\n\n\nNo matching items"
+    "text": "VSCode&R用にlanguageserverをインストール\n\n\n\n\n\n\nVSCode\n\n\nR\n\n\n\n\n\n\n\n\n\nApr 15, 2024\n\n\ny-sako\n\n\n\n\n\n\n\n\n\n\n\n\nPost With Code\n\n\n\n\n\n\nnews\n\n\ncode\n\n\nanalysis\n\n\n\n\n\n\n\n\n\nApr 10, 2024\n\n\ny-sako\n\n\n\n\n\n\nNo matching items"
   },
   {
     "objectID": "posts/welcome/index.html",
@@ -66,6 +66,41 @@
     "objectID": "posts/welcome/index.html#おわりに",
     "href": "posts/welcome/index.html#おわりに",
     "title": "VSCode&Rでlanguageserverをインストール",
+    "section": "おわりに",
+    "text": "おわりに\nまあ、postも問題無さそう&renvもvscode上での補完も効いているっぽいので今日の所はこれで"
+  },
+  {
+    "objectID": "posts/vscode-r-languageserver/index.html",
+    "href": "posts/vscode-r-languageserver/index.html",
+    "title": "VSCode&R用にlanguageserverをインストール",
+    "section": "",
+    "text": "VSCode&R用にlanguageserverをインストール、出来なかったので解決策をメモ。"
+  },
+  {
+    "objectID": "posts/vscode-r-languageserver/index.html#はじめに",
+    "href": "posts/vscode-r-languageserver/index.html#はじめに",
+    "title": "VSCode&R用にlanguageserverをインストール",
+    "section": "",
+    "text": "VSCode&R用にlanguageserverをインストール、出来なかったので解決策をメモ。"
+  },
+  {
+    "objectID": "posts/vscode-r-languageserver/index.html#余談",
+    "href": "posts/vscode-r-languageserver/index.html#余談",
+    "title": "VSCode&R用にlanguageserverをインストール",
+    "section": "余談",
+    "text": "余談\nこちらのブログはQuartoで作成しており、特に執筆環境を簡単に再現するために\n\nエディタはvscode\ndevcontainerで環境構築\nRのパッケージ管理はrenv\n\nを採用してみました。なんかモダンだね嬉しいねと、意気揚々と初記事を書こうと息巻いていたらvscodeのセットアップでいきなりハマったので悲しい気持ちになりました。"
+  },
+  {
+    "objectID": "posts/vscode-r-languageserver/index.html#本題",
+    "href": "posts/vscode-r-languageserver/index.html#本題",
+    "title": "VSCode&R用にlanguageserverをインストール",
+    "section": "本題",
+    "text": "本題\nまずはrenv::init()してlanguageserverをインスト\n\nrenv::init()\ninstall.packages(\"languageserver\")\n\nしようと思ったら弾かれる、、\nいくつかのパッケージが上手く入っていなかったので順に見ていくと、 だいたいxml2パッケージのインストールで止まっているようでした。\nなんてことはなくコンテナ環境にlibxml2-devが入っていなかったので\n\nsudo apt-get install libxml2-dev\n\n入れてあげるとすんなり解決しました、Dockerfileに追記しとこ、、\nhttps://github.com/r-lib/xml2/issues/223\n\nlibrary(languageserver)\nrenv::snapshot()"
+  },
+  {
+    "objectID": "posts/vscode-r-languageserver/index.html#おわりに",
+    "href": "posts/vscode-r-languageserver/index.html#おわりに",
+    "title": "VSCode&R用にlanguageserverをインストール",
     "section": "おわりに",
     "text": "おわりに\nまあ、postも問題無さそう&renvもvscode上での補完も効いているっぽいので今日の所はこれで"
   }

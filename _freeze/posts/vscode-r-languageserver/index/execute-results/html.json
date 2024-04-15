@@ -1,0 +1,15 @@
+{
+  "hash": "c2a4c8ed70ad637a127b327ca6d2c9e4",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"VSCode&R用にlanguageserverをインストール\"\nauthor: \"y-sako\"\ndate: \"2024-04-15\"\ncategories: [VSCode, R]\n---\n\n\n## はじめに\n\nVSCode&R用にlanguageserverをインストール、出来なかったので解決策をメモ。\n\n## 余談\n\nこちらのブログはQuartoで作成しており、特に執筆環境を簡単に再現するために\n\n- エディタはvscode\n\n- devcontainerで環境構築\n\n- Rのパッケージ管理はrenv\n\nを採用してみました。なんかモダンだね嬉しいねと、意気揚々と初記事を書こうと息巻いていたらvscodeのセットアップでいきなりハマったので悲しい気持ちになりました。\n\n## 本題\n\nまずは`renv::init()`して`languageserver`をインスト\n\n\n::: {.cell}\n\n```{.r .cell-code}\nrenv::init()\ninstall.packages(\"languageserver\")\n```\n:::\n\n\nしようと思ったら弾かれる、、\n\nいくつかのパッケージが上手く入っていなかったので順に見ていくと、\nだいたい`xml2`パッケージのインストールで止まっているようでした。\n\nなんてことはなくコンテナ環境に`libxml2-dev`が入っていなかったので\n\n\n::: {.cell}\n\n```{.bash .cell-code}\nsudo apt-get install libxml2-dev\n```\n:::\n\n\n入れてあげるとすんなり解決しました、Dockerfileに追記しとこ、、\n\n[https://github.com/r-lib/xml2/issues/223]()\n\n\n::: {.cell}\n\n```{.r .cell-code}\nlibrary(languageserver)\nrenv::snapshot()\n```\n:::\n\n\n## おわりに\n\nまあ、postも問題無さそう&renvもvscode上での補完も効いているっぽいので今日の所はこれで",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}
