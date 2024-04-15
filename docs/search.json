@@ -4,14 +4,14 @@
     "href": "index.html",
     "title": "Posts",
     "section": "",
-    "text": "Post With Code\n\n\n\n\n\n\nnews\n\n\ncode\n\n\nanalysis\n\n\n\n\n\n\n\n\n\nApr 10, 2024\n\n\ny-sako\n\n\n\n\n\n\n\n\n\n\n\n\nWelcome To My Blog\n\n\n\n\n\n\nnews\n\n\n\n\n\n\n\n\n\nApr 7, 2024\n\n\ny-sako\n\n\n\n\n\n\nNo matching items"
+    "text": "VSCode&Rでlanguageserverをインストール\n\n\n\n\n\n\nvscode\n\n\nr\n\n\n\n\n\n\n\n\n\nApr 15, 2024\n\n\ny-sako\n\n\n\n\n\n\n\n\n\n\n\n\nPost With Code\n\n\n\n\n\n\nnews\n\n\ncode\n\n\nanalysis\n\n\n\n\n\n\n\n\n\nApr 10, 2024\n\n\ny-sako\n\n\n\n\n\n\nNo matching items"
   },
   {
     "objectID": "posts/welcome/index.html",
     "href": "posts/welcome/index.html",
-    "title": "Welcome To My Blog",
+    "title": "VSCode&Rでlanguageserverをインストール",
     "section": "",
-    "text": "This is the first post in a Quarto blog. Welcome!\nSince this post doesn’t specify an explicit image, the first image in the post will be used in the listing page of posts."
+    "text": "こちらのブログはQuartoで作成しています。\n特に執筆環境を簡単に再現するために\n\nエディタはvscode\ndevcontainerで環境構築\nRのパッケージ管理はrenv\n\nを採用してみました。\n意気揚々と初記事を書こうと息巻いていたらvscodeのセットアップでいきなりハマったので解決策をメモ。"
   },
   {
     "objectID": "posts/welcome/index.html#test2",
@@ -33,5 +33,40 @@
     "title": "y-sako",
     "section": "",
     "text": "バックグラウンドはマーケティングサイエンス/消費者行動論。\n現在はリサーチ会社でデータサイエンスっぽい事してます。\nQuarto推しなので学習ノート兼ブログ作ってみました。"
+  },
+  {
+    "objectID": "posts/welcome/index.html#はじめに",
+    "href": "posts/welcome/index.html#はじめに",
+    "title": "VSCode&Rでlanguageserverをインストール",
+    "section": "",
+    "text": "こちらのブログはQuartoで作成しています。\n特に執筆環境を簡単に再現するために\n\nエディタはvscode\ndevcontainerで環境構築\nRのパッケージ管理はrenv\n\nを採用してみました。\n意気揚々と初記事を書こうと息巻いていたらvscodeのセットアップでいきなりハマったので解決策をメモ。"
+  },
+  {
+    "objectID": "posts/welcome/index.html#本題",
+    "href": "posts/welcome/index.html#本題",
+    "title": "VSCode&Rでlanguageserverをインストール",
+    "section": "本題",
+    "text": "本題\nまずはrenv::init()してlanguageserverをインスト\n\nrenv::init()\ninstall.packages(\"languageserver\")\n\nしようと思ったら弾かれる、、\nいくつかのパッケージが上手く入っていなかったので順に見ていくと、 だいたいxml2パッケージのインストールで止まっているようでした。\nhttps://github.com/r-lib/xml2/issues/223\nなんてことはなくコンテナ環境にlibxml2-devが入っていなかったので\n\nsudo apt-get install libxml2-dev\n\n入れてあげるとすんなり解決しました、Dockerfileに追記しとこ、、\n\nlibrary(languageserver)\nrenv::snapshot()"
+  },
+  {
+    "objectID": "posts/welcome/index.html#section",
+    "href": "posts/welcome/index.html#section",
+    "title": "VSCode&Rでlanguageserverをインストール",
+    "section": "",
+    "text": "こちらのブログはQuartoで作成しています。\n特に執筆環境を簡単に再現するために\n\nエディタはvscode\ndevcontainerで環境構築\nRのパッケージ管理はrenv\n\nを採用してみました。\n意気揚々と記事を書こうと思っていたらvscodeのセットアップでいきなりハマったので解決策をメモしておきます。"
+  },
+  {
+    "objectID": "posts/welcome/index.html#section-1",
+    "href": "posts/welcome/index.html#section-1",
+    "title": "VSCode&Rでlanguageserverをインストール",
+    "section": "",
+    "text": "まずはrenv::init()してlanguageserverをインスト\n\nrenv::init()\ninstall.packages(\"languageserver\")\n\nいくつかのパッケージが上手く入っていなかったので順に見ていくと、 だいたいxml2パッケージのインストールで止まっているようでした。\nhttps://github.com/r-lib/xml2/issues/223\nなんてことはなくコンテナ環境にlibxml2-devが入っていなかったので\n\nsudo apt-get install libxml2-dev\n\nとして入れてあげるとすんなり解決しました、、\n\nlibrary(languageserver)\nrenv::snapshot()"
+  },
+  {
+    "objectID": "posts/welcome/index.html#おわりに",
+    "href": "posts/welcome/index.html#おわりに",
+    "title": "VSCode&Rでlanguageserverをインストール",
+    "section": "おわりに",
+    "text": "おわりに\nまあ、postも問題無さそう&renvもvscode上での補完も効いているっぽいので今日の所はこれで"
   }
 ]
