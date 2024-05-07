@@ -1,0 +1,553 @@
+---
+title: "LightWeightMMMをRobynサンプルデータで試す"
+author: "y-sako"
+date: "2024-04-15"
+categories: [VSCode, R]
+---
+
+## セットアップ
+
+```{r}
+if (!require("pacman")) install.packages("pacman"); library(pacman)
+p_load(tidyverse)
+# p_load(magrittr)
+p_load(janitor)
+p_load(Robyn)
+p_load(reactable)
+p_load(DT)
+p_load(reticulate) # remotes::install_github("rstudio/reticulate")
+# install tidyverse
+
+# # for systemfonts
+# sudo apt-get install libfontconfig1-dev
+# sudo apt-get install libharfbuzz-dev libfribidi-dev
+# # for ragg
+# sudo apt-get install libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev
+
+# install.packages("tidyverse")
+
+# install Robyn
+
+# # for systemfonts
+# sudo apt-get install libfontconfig1-dev
+# sudo apt-get install libharfbuzz-dev libfribidi-dev
+# # for ragg
+# sudo apt-get install libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev
+
+# install.packages("Robyn")
+# # for nloptr
+# sudo apt-get install cmake
+
+# install.packages("rstan")
+# # 容量注意
+```
+
+## データ
+
+```{r}
+# Robynのサンプルデータ
+dat_robyn = 
+  dt_simulated_weekly %>% 
+  tibble() %>% 
+  clean_names() %>% 
+  select(
+    week = date,              
+    revenue,
+    # paid
+    tv_cost = tv_s,
+    ooh_cost = ooh_s,           
+    print_cost = print_s,
+    facebook_cost = facebook_s,
+    facebook_impression = facebook_i,
+    search_cost = search_s,
+    search_click = search_clicks_p,
+    newsletter_cost = newsletter,
+    # base
+    competitor_sales = competitor_sales_b,
+    events = events
+  ) %>% 
+  mutate(event_1 = case_when(events == "event1" ~ 1, .default = 0)) %>% 
+  mutate(event_2 = case_when(events == "event2" ~ 1, .default = 0)) %>% 
+  select(-events)
+
+dat_robyn %>% 
+  head() %>% reactable()
+
+# 変数マスタ
+mst_vars = tibble::tribble(
+  ~var_category, ~var_type,     ~value_type,  ~var_name,
+  "time",        "week",        "week",       "week",
+  "dep_var",     "dep_var",     "revenue",    "revenue",
+  "paid_media",  "tv",          "cost",       "tv_cost",
+  "paid_media",  "ooh",         "cost",       "ooh_cost",
+  "paid_media",  "print",       "cost",       "print_cost",
+  "paid_media",  "facebook",    "cost",       "facebook_cost",
+  "paid_media",  "facebook",    "imp",        "facebook_impression",
+  "paid_media",  "search",      "cost",       "search_cost",
+  "paid_media",  "search",      "click",      "search_click",
+  "paid_media",  "newsletter",  "cost",       "newsletter_cost",
+  "baseline",    "competitor",  "sales",      "competitor_sales",
+  "baseline",    "event_1",     "flag",       "event_1",
+  "baseline",    "event_2",     "flag",       "event_2",
+) %>% 
+  mutate(mod_flag = case_when(
+    var_name %in% c(
+      "tv_cost",
+      "ooh_cost",
+      "print_cost",
+      "facebook_impression",
+      "search_click",
+      "newsletter_cost",
+      "competitor_sales",
+      "event_1",
+      "event_2"
+    ) ~ 1,
+    .default = 0
+  ))
+
+mst_vars %>% reactable()
+
+lst_paid_media_vars = 
+  mst_vars %>% 
+  filter(var_category == "paid_media", 
+         mod_flag == 1) %>% 
+  pull(var_name)
+
+lst_paid_media_cost = 
+  mst_vars %>% 
+  filter(value_type == "cost") %>% 
+  pull(var_name)
+
+lst_ctrl_vars = 
+  mst_vars %>% 
+  filter(var_category != "paid_media", 
+         mod_flag == 1) %>% 
+  pull(var_name)
+```
+
+## モデリング
+
+```{python}
+
+# !pip install pandas
+# !pip install polars
+# !pip install pyarrow
+# !pip install matplotlib
+# !pip install jax
+# !pip install numpyro
+# !pip install arviz
+# !pip install itables
+# !pip install lightweight_mmm
+# # sudo apt-get install libhdf5-serial-dev
+
+# セットアップ
+## ライブラリ
+import pathlib 
+import os
+import pandas as pd
+import polars as pl
+import jax.numpy as jnp
+import jax
+import numpyro
+import numpy as np
+from matplotlib import pyplot as plt
+from lightweight_mmm import optimize_media
+from lightweight_mmm import plot
+from lightweight_mmm import preprocessing
+from lightweight_mmm import utils
+from lightweight_mmm import lightweight_mmm
+import arviz as az
+from itables import show
+
+## シードを固定
+SEED = 777
+
+dat_mod = r.dat_robyn
+lst_paid_media_vars = r.lst_paid_media_vars
+lst_paid_media_cost = r.lst_paid_media_cost
+lst_ctrl_vars = r.lst_ctrl_vars
+
+data_size = len(dat_mod)
+
+target = jnp.array(dat_mod["revenue"])
+media_data = jnp.array(dat_mod[lst_paid_media_vars])
+cost_data = jnp.array(dat_mod[lst_paid_media_cost])
+costs = jnp.sum(media_data, axis=0)
+extra_features = jnp.array(dat_mod[lst_ctrl_vars])
+
+#%%
+
+# 学習期間と検証期間で分割
+split_point = data_size - 13
+media_data_train = media_data[:split_point, ...]
+media_data_test = media_data[split_point:, ...]
+extra_features_train = extra_features[:split_point, ...]
+extra_features_test = extra_features[split_point:, ...]
+target_train = target[:split_point]
+# スケーラー
+media_scaler = preprocessing.CustomScaler(divide_operation=jnp.mean)
+extra_features_scaler = preprocessing.CustomScaler(divide_operation=jnp.mean)
+target_scaler = preprocessing.CustomScaler(divide_operation=jnp.mean)
+cost_scaler = preprocessing.CustomScaler(divide_operation=jnp.mean)
+# スケーリング
+media_data_train = media_scaler.fit_transform(media_data_train)
+extra_features_train = extra_features_scaler.fit_transform(extra_features_train)
+target_train = target_scaler.fit_transform(target_train)
+costs = cost_scaler.fit_transform(costs)
+
+#%%
+# モデルパス
+path_model = pathlib.Path("/workspace/draft/lightweight-mmm/model/LMMM.pkl")
+
+#%%
+if path_model.exists():
+    mmm = utils.load_model(file_path=str(path_model))
+else:
+    # モデルの設定
+    mmm = lightweight_mmm.LightweightMMM(model_name="hill_adstock")
+    # MCMCの設定
+    N_CHAINS = 2
+    number_warmup = 2000
+    number_samples = 2000
+    # モデルの推定
+    mmm.fit(
+        media=media_data_train,
+        media_prior=costs,
+        target=target_train,
+        extra_features=extra_features_train,
+        number_warmup=number_warmup,
+        number_samples=number_samples,
+        number_chains=N_CHAINS,
+        seed=SEED
+        )
+    # モデルの保存
+    utils.save_model(media_mix_model=mmm, file_path=str(path_model))
+    
+mmm.print_summary()
+# dat_summary = az.summary(mmm._mcmc)
+# show(dat_summary)
+
+# # # !pip install IPython
+# from IPython.display import display, Latex, HTML
+# import IPython
+# show(dat_summary)
+
+
+
+# HTML(show(dat_summary))
+
+# dat_summary.to_html()
+
+# print(show(dat_summary))
+
+# %%
+
+# 貢献度分解
+contribution_df = plot.create_media_baseline_contribution_df(
+    media_mix_model=mmm,
+    target_scaler=target_scaler,
+    )
+contribution_df = pl.from_pandas(contribution_df)
+contribution_df = contribution_df.select([
+  pl.col("period"), 
+  pl.col("avg_prediction"), 
+  pl.col("^*contribution$")
+  ])
+contribution_df = contribution_df.melt(
+  id_vars = ["period", "avg_prediction"],
+  value_vars = contribution_df.select([pl.col("^*contribution$")]).columns
+  )
+
+target_df = pl.DataFrame(
+  pd.DataFrame(
+    target_scaler.inverse_transform(target_train),
+    columns=["target"]
+    )
+  ).with_row_index(
+    name="period", 
+    offset=1
+  ).with_columns(
+    pl.col("period").cast(pl.Int64)
+  )
+
+output_df = contribution_df.join(
+  target_df, 
+  on="period", 
+  how="left"
+  ).with_columns(
+    (pl.col("target")/pl.col("avg_prediction")).alias("scaleback_rate")
+  ).with_columns(
+    (pl.col("value")*pl.col("scaleback_rate")).alias("scaleback_value")
+  ).select([
+    "period",
+    "variable",
+    "scaleback_value"
+  ]).rename({
+    "scaleback_value": "value"
+  })
+
+output_df = output_df.to_pandas()
+
+#%%
+media_contribution, roi_hat = mmm.get_posterior_metrics(
+  target_scaler=target_scaler, 
+  cost_scaler=cost_scaler
+  )
+
+pd.DataFrame(media_contribution)
+pd.DataFrame(roi_hat)
+
+fig = plot.plot_model_fit(mmm, target_scaler=target_scaler)
+fig.show()
+
+# #%%
+# help(lightweight_mmm)
+
+# # %%
+# for item in dir(lightweight_mmm):
+#     print(item)
+
+# # %%
+# [item for item in dir(lightweight_mmm.LightweightMMM)]
+
+# # %%
+# mmm.model_name
+# %%
+
+# contribution_colname = [col for col in raw_contribution_df.columns.to_list() if col.endswith("contribution")]
+# contribution_colname
+# # .str.endswith("contribution")
+
+# # 貢献度の合計が合致しているかを確認
+# contribution_df.group_by("period").agg([
+#     pl.col("avg_prediction").unique().first(),
+#     pl.col("value").sum().alias("total")
+# ]).sort(by="period")
+
+# # チェック
+# contribution_df.join(
+#   target_df, 
+#   on="period", 
+#   how="left"
+#   ).with_columns(
+#     (pl.col("target")/pl.col("avg_prediction")).alias("scaleback_rate")
+#   ).with_columns(
+#     (pl.col("value")*pl.col("scaleback_rate")).alias("scaleback_value")
+#   ).group_by("period").agg([
+#     pl.col("avg_prediction").unique().first(),
+#     pl.col("target").unique().first(),
+#     pl.col("scaleback_value").sum().alias("total")
+#   ]).sort(by="period")
+```
+
+```{r}
+# p_load(reticulate)
+# py$dat_summary %>% 
+#   rownames_to_column("parameter") %>% 
+#   tibble() %>% 
+#   filter(str_detect(parameter, "^media_transformed")) %>% 
+#   select(parameter, r_hat) %>% 
+#   datatable()
+```
+
+```{r}
+
+mst_week = 
+  dat_robyn %>% 
+  select(week) %>% 
+  mutate(t = row_number())
+
+mst_media = 
+  tibble(paid_media_vars = lst_paid_media_vars) %>% 
+  separate(paid_media_vars, "_", into = c("media", "vars")) %>% 
+  mutate(channel_no = row_number() - 1) %>% 
+  mutate(channel_no = str_c("channel_", channel_no))
+
+dat_output = 
+  py$output_df %>% 
+  tibble() %>% 
+  mutate(variable = str_remove(variable, "contribution")) %>% 
+  mutate(variable = str_remove(variable, "\\s")) %>% 
+  left_join(mst_media, by = c("variable" = "channel_no")) %>% 
+  select(-variable) %>% 
+  rename(variable = media) %>% 
+  left_join(mst_week, by = c("period" = "t"))
+
+dat_output %>% 
+  # mutate(category = 
+  #          factor(category, levels = c("paid_media", "baseline"))) %>% 
+  ggplot() + 
+  geom_bar(aes(x=week, y=value, fill=variable, group=variable), 
+           stat="identity", alpha=0.5) +
+  scale_y_continuous(labels = scales::comma_format())
+
+dat_output %>% reactable
+```
+
+## Pyhtonテスト
+
+```{r}
+# plt <- import("matplotlib.pyplot", convert = TRUE)
+# plt$plot(c(1,2,3,4))
+# plt$show()
+```
+
+```{python}
+import matplotlib.pyplot as plt
+plt.plot([1,2,3,4])
+plt.show()
+```
+
+```{python}
+
+import matplotlib.axes as axis
+
+def _create_shaded_line_plot(predictions: jnp.ndarray,
+                             target: jnp.ndarray,
+                             axis: matplotlib.axes.Axes,
+                             title_prefix: str = "",
+                             interval_mid_range: float = .9,
+                             digits: int = 3) -> None:
+  """Creates a plot of ground truth, predicted value and credibility interval.
+
+  Args:
+    predictions: 2d array of predicted values.
+    target: Array of true values. Must be same length as predictions.
+    axis: Matplotlib axis in which to plot the data.
+    title_prefix: Prefix to add as the label of the plot.
+    interval_mid_range: Mid range interval to take for plotting. Eg. .9 will use
+      .05 and .95 as the lower and upper quantiles. Must be a float number
+      between 0 and 1.
+    digits: Number of decimals to display on metrics in the plot.
+  """
+  if predictions.shape[1] != len(target):
+    raise ValueError(
+        "Predicted data and ground-truth data must have same length.")
+  upper_quantile = 1 - (1 - interval_mid_range) / 2
+  lower_quantile = (1 - interval_mid_range) / 2
+  upper_bound = jnp.quantile(a=predictions, q=upper_quantile, axis=0)
+  lower_bound = jnp.quantile(a=predictions, q=lower_quantile, axis=0)
+
+  r2, _ = arviz.r2_score(y_true=target, y_pred=predictions)
+  mape = 100 * metrics.mean_absolute_percentage_error(
+      y_true=target, y_pred=predictions.mean(axis=0))
+  axis.plot(jnp.arange(target.shape[0]), target, c="grey", alpha=.9)
+  axis.plot(
+      jnp.arange(target.shape[0]),
+      predictions.mean(axis=0),
+      c="green",
+      alpha=.9)
+  axis.fill_between(
+      x=jnp.arange(target.shape[0]),
+      y1=lower_bound,
+      y2=upper_bound,
+      alpha=.35,
+      color="green")
+  axis.legend(["True KPI", "Predicted KPI"])
+  axis.yaxis.grid(color="gray", linestyle="dashed", alpha=0.3)
+  axis.xaxis.grid(color="gray", linestyle="dashed", alpha=0.3)
+  # title = " ".join([
+  #     title_prefix,
+  #     "True and predicted KPI.",
+  #     "R2 = {r2:.{digits}f}".format(r2=r2, digits=digits),
+  #     "MAPE = {mape:.{digits}f}%".format(mape=mape, digits=digits)
+  # ])
+  # axis.title.set_text(title)
+  plt.close()
+
+
+
+def _call_fit_plotter(
+    predictions: jnp.ndarray,
+    target: jnp.ndarray,
+    interval_mid_range: float,
+    digits: int,
+) -> matplotlib.figure.Figure:
+  """Calls the shaded line plot once for national and N times for geo models.
+
+  Args:
+    predictions: 2d array of predicted values.
+    target: Array of true values. Must be same length as prediction.
+    interval_mid_range: Mid range interval to take for plotting. Eg. .9 will use
+      .05 and .95 as the lower and upper quantiles. Must be a float number
+      between 0 and 1.
+    digits: Number of decimals to display on metrics in the plot.
+
+  Returns:
+    Figure of the plot.
+  """
+  # TODO(): Allow to pass geo names for fit plots
+  if predictions.ndim == 3:  # Multiple plots for geo model
+    figure, axes = plt.subplots(predictions.shape[-1],
+                                figsize=(10, 5 * predictions.shape[-1]))
+    for i, ax in enumerate(axes):
+      _create_shaded_line_plot(predictions=predictions[..., i],
+                               target=target[..., i],
+                               axis=ax,
+                               title_prefix=f"Geo {i}:",
+                               interval_mid_range=interval_mid_range,
+                               digits=digits)
+  else:  # Single plot for national model
+    figure = _create_shaded_line_plot(predictions=predictions,
+                             target=target,
+                             axis=ax,
+                             interval_mid_range=interval_mid_range,
+                             digits=digits)
+  return figure
+
+
+def plot_model_fit(media_mix_model: lightweight_mmm.LightweightMMM,
+                   target_scaler: Optional[preprocessing.CustomScaler] = None,
+                   interval_mid_range: float = .9,
+                   digits: int = 3) -> matplotlib.figure.Figure:
+  """Plots the ground truth, predicted value and interval for the training data.
+
+  Model needs to be fit before calling this function to plot.
+
+  Args:
+    media_mix_model: Media mix model.
+    target_scaler: Scaler used for scaling the target, to unscaled values and
+      plot in the original scale.
+    interval_mid_range: Mid range interval to take for plotting. Eg. .9 will use
+      .05 and .95 as the lower and upper quantiles. Must be a float number.
+      between 0 and 1.
+    digits: Number of decimals to display on metrics in the plot.
+
+  Returns:
+    Plot of model fit.
+  """
+  if not hasattr(media_mix_model, "trace"):
+    raise lightweight_mmm.NotFittedModelError(
+        "Model needs to be fit first before attempting to plot its fit.")
+  target_train = media_mix_model._target
+  posterior_pred = media_mix_model.trace["mu"]
+  if target_scaler:
+    posterior_pred = target_scaler.inverse_transform(posterior_pred)
+    target_train = target_scaler.inverse_transform(target_train)
+
+  return _call_fit_plotter(
+      predictions=posterior_pred,
+      target=target_train,
+      interval_mid_range=interval_mid_range,
+      digits=digits)
+
+
+
+plot_model_fit(mmm, target_scaler=target_scaler).show()
+```
+
+## 環境をアップデート
+
+
+```{r}
+#| eval: false
+#| echo: false
+renv::snapshot()
+```
+
+
+```{python}
+#| eval: false
+#| echo: false
+!pip freeze > requirements.txt
+```
